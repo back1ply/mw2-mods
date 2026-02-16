@@ -20,28 +20,48 @@ onPlayerConnect()
 		if (isDefined(player.pers["isBot"]) && player.pers["isBot"])
 			continue;
 
-		player.pers["fpsBoost"] = false;
-		player.pers["fpsBoostMsg"] = false;
-		player thread onPlayerGiveLoadout();
+		if (!isDefined(player.pers["fpsBoost"]))
+			player.pers["fpsBoost"] = false;
+
+		if (!isDefined(player.pers["fpsBoostMsg"]))
+			player.pers["fpsBoostMsg"] = false;
+
+		player thread onPlayerSpawned();
 	}
 }
 
-onPlayerGiveLoadout()
+onPlayerSpawned()
 {
 	self endon("disconnect");
 
 	for(;;)
 	{
-		self waittill("giveLoadout");
+		self waittill("spawned_player");
+		self thread applyFPSBoost();
 		self thread showMessage();
 		self thread watchToggle();
+	}
+}
+
+applyFPSBoost()
+{
+	self endon("disconnect");
+	self endon("death");
+
+	// wait for promod's setSpawnDvars() to finish
+	wait 0.1;
+
+	if (self.pers["fpsBoost"])
+	{
+		self SetClientDvar("r_fullbright", 1);
+		self SetClientDvar("r_fog", 0);
+		self SetClientDvar("r_detailMap", 0);
 	}
 }
 
 showMessage()
 {
 	self endon("disconnect");
-	self endon("giveLoadout");
 	self endon("death");
 
 	if (self.pers["fpsBoostMsg"])
@@ -55,7 +75,6 @@ showMessage()
 watchToggle()
 {
 	self endon("disconnect");
-	self endon("giveLoadout");
 	self endon("death");
 
 	self notifyOnPlayerCommand("toggle_fpsboost", "+actionslot 1");
