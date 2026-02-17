@@ -4,6 +4,10 @@
 
 init()
 {
+	// Skip if enhanced promod already handles FPS boost natively
+	if (getDvar("promod_version") == "enhanced_v3.3")
+		return;
+
 	setDvarIfUninitialized("scr_allowFPSBoost", true);
 	level.allowFPSBoost = getDvarInt("scr_allowFPSBoost");
 
@@ -27,6 +31,7 @@ onPlayerConnect()
 			player.pers["fpsBoostMsg"] = false;
 
 		player thread onPlayerSpawned();
+		player thread watchToggle();
 	}
 }
 
@@ -39,7 +44,6 @@ onPlayerSpawned()
 		self waittill("spawned_player");
 		self thread applyFPSBoost();
 		self thread showMessage();
-		self thread watchToggle();
 	}
 }
 
@@ -53,9 +57,8 @@ applyFPSBoost()
 
 	if (self.pers["fpsBoost"])
 	{
-		self SetClientDvar("r_fullbright", 1);
-		self SetClientDvar("r_fog", 0);
-		self SetClientDvar("r_detailMap", 0);
+		self setBoostDvars(true);
+		self iPrintln("^7FPS Boost ^2On");
 	}
 }
 
@@ -75,7 +78,6 @@ showMessage()
 watchToggle()
 {
 	self endon("disconnect");
-	self endon("death");
 
 	self notifyOnPlayerCommand("toggle_fpsboost", "+actionslot 1");
 	self _SetActionSlot(1, "");
@@ -84,23 +86,41 @@ watchToggle()
 	{
 		self waittill("toggle_fpsboost");
 
+		if (isDefined(self.fpsBoostCooldown))
+			continue;
+
+		self.fpsBoostCooldown = true;
+
+		self.pers["fpsBoost"] = !self.pers["fpsBoost"];
+		self setBoostDvars(self.pers["fpsBoost"]);
 		self playLocalSound("claymore_activated");
 
 		if (self.pers["fpsBoost"])
-		{
-			self SetClientDvar("r_fullbright", 0);
-			self SetClientDvar("r_fog", 1);
-			self SetClientDvar("r_detailMap", 1);
-			self iPrintlnBold("^7FPS Boost ^1Off");
-			self.pers["fpsBoost"] = false;
-		}
-		else
-		{
-			self SetClientDvar("r_fullbright", 1);
-			self SetClientDvar("r_fog", 0);
-			self SetClientDvar("r_detailMap", 0);
 			self iPrintlnBold("^7FPS Boost ^2On");
-			self.pers["fpsBoost"] = true;
-		}
+		else
+			self iPrintlnBold("^7FPS Boost ^1Off");
+
+		wait 0.5;
+		self.fpsBoostCooldown = undefined;
+	}
+}
+
+setBoostDvars(enabled)
+{
+	if (enabled)
+	{
+		self SetClientDvar("r_fullbright", 1);
+		self SetClientDvar("r_fog", 0);
+		self SetClientDvar("r_detailMap", 0);
+		self SetClientDvar("r_glow_allowed", 0);
+		self SetClientDvar("r_drawdecals", 0);
+	}
+	else
+	{
+		self SetClientDvar("r_fullbright", 0);
+		self SetClientDvar("r_fog", 1);
+		self SetClientDvar("r_detailMap", 1);
+		self SetClientDvar("r_glow_allowed", 1);
+		self SetClientDvar("r_drawdecals", 1);
 	}
 }
